@@ -35,6 +35,7 @@ $(function () {
 
     request.onMessage = function (response) {
         var message = response.responseBody;
+        console.log(message);
         try {
             var json = atmosphere.util.parseJSON(message);
         } catch (e) {
