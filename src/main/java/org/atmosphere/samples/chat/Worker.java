@@ -3,13 +3,15 @@ package org.atmosphere.samples.chat;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.atmosphere.cpr.AtmosphereResource;
-import org.atmosphere.cpr.BroadcasterFactory;
+import org.atmosphere.cpr.Broadcaster;
 
 public class Worker implements Runnable {
 	private final Map<Long, OurObject> monitorTable = new ConcurrentHashMap<>();
-	private final Map<String, AtmosphereResource> currentResourceTable = new ConcurrentHashMap<>();
+	private final Map<String, Broadcaster> currentResourceTable = new ConcurrentHashMap<>();
 
 	@Override
 	public void run() {
@@ -25,17 +27,23 @@ public class Worker implements Runnable {
 
 	public void sendAtmostphereResponse(final String uuid,
 			final SqrlAuthenticationStatus newAuthStatus) {
-		final AtmosphereResource resource = currentResourceTable.get(uuid);
-		final BroadcasterFactory broadcasterFactory = resource.getAtmosphereConfig().getBroadcasterFactory();
-		broadcasterFactory.lookup(resource.uuid()).broadcast(newAuthStatus.toString());
+		final Broadcaster broadcaster = currentResourceTable.get(uuid);
+		System.out.println("Broadcasting to " + uuid);
+		final Future<Object> future = broadcaster.broadcast(newAuthStatus);
+		try {
+			future.get();
+			System.out.println("Broadcast complete for " + uuid);
+		} catch (final InterruptedException | ExecutionException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void monitorCorrelatorForChange(final OurObject object) {
 		monitorTable.put(object.getTriggerAt(), object);
 	}
 
-	public void storeLatestResource(final AtmosphereResource resource) {
-		currentResourceTable.put(resource.uuid(), resource);
+	public void storeLatestResource(final AtmosphereResource resource, final Broadcaster broadcaster) {
+		currentResourceTable.put(resource.uuid(), broadcaster);
 
 	}
 }
