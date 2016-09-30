@@ -48,9 +48,11 @@ $(function () {
             logged = true;
             status.text(myName + ': ').css('color', 'blue');
         } else {
-            var me = json.author == author;
-            var date = typeof(json.time) == 'string' ? parseInt(json.time) : json.time;
-            addMessage(json.author, json.text, me ? 'blue' : 'black', new Date(date));
+            var color = json.author === author ? 'blue' : 'black';
+          	var datetime = new Date();
+            content.append('<p><span style="color:' + color + '">' + json.author + '</span> @ ' + +(datetime.getHours() < 10 ? '0' + datetime.getHours() : datetime.getHours()) + ':'
+                + (datetime.getMinutes() < 10 ? '0' + datetime.getMinutes() : datetime.getMinutes())
+                + ': ' + json.message + '</p>');
         }
     };
 
@@ -85,7 +87,8 @@ $(function () {
         }
     });
 
-    function addMessage(author, message, color, datetime) {
+    function addMessage(author, message, color) {
+    	var datetime = new Date();
         content.append('<p><span style="color:' + color + '">' + author + '</span> @ ' + +(datetime.getHours() < 10 ? '0' + datetime.getHours() : datetime.getHours()) + ':'
             + (datetime.getMinutes() < 10 ? '0' + datetime.getMinutes() : datetime.getMinutes())
             + ': ' + message + '</p>');

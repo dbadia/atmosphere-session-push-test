@@ -26,7 +26,6 @@ import org.atmosphere.cpr.AtmosphereHandler;
 import org.atmosphere.cpr.AtmosphereRequest;
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.AtmosphereResourceEvent;
-import org.atmosphere.cpr.AtmosphereResponse;
 
 /**
  * Simple AtmosphereHandler that implement the logic to build a Server Side Events Chat application.
@@ -53,11 +52,15 @@ public class OurAtmosphereHandler implements AtmosphereHandler {
 		if (req.getMethod().equalsIgnoreCase("GET")) {
 			resource.suspend();
 			processor.storeLatestResource(resource);
-			// Second, broadcast message to all connected users.
 		} else if (req.getMethod().equalsIgnoreCase("POST")) {
 			// Post means we're being sent data
 			final String message = req.getReader().readLine().trim();
-			final OurObject object = new OurObject(resource, message);
+			// Simple JSON -- Use Jackson for more complex structure
+			// Message looks like { "author" : "foo", "message" : "bar" }
+			final String author = message.substring(message.indexOf(":") + 2, message.indexOf(",") - 1);
+			final String chat = message.substring(message.lastIndexOf(":") + 2, message.length() - 2);
+
+			final OurObject object = new OurObject(resource, author);
 			processor.monitorCorrelatorForChange(object);
 		}
 	}
@@ -66,31 +69,9 @@ public class OurAtmosphereHandler implements AtmosphereHandler {
 	@Override
 	public void onStateChange(final AtmosphereResourceEvent event) throws IOException {
 		final AtmosphereResource r = event.getResource();
-		final AtmosphereResponse res = r.getResponse();
 
 		if (!event.isResuming()) {
 			System.out.println("Closed " + r.uuid());
-		} else if (r.isSuspended()) {
-			final Object o = event.getMessage();
-			if (o != null) {
-				final String body = event.getMessage().toString();
-
-				// Simple JSON -- Use Jackson for more complex structure
-				// Message looks like { "author" : "foo", "message" : "bar" }
-
-				res.getWriter().write("REPLY!");
-				switch (r.transport()) {
-					case JSONP:
-					case LONG_POLLING:
-						event.getResource().resume();
-						break;
-					case WEBSOCKET:
-						break;
-					case STREAMING:
-						res.getWriter().flush();
-						break;
-				}
-			}
 		}
 	}
 

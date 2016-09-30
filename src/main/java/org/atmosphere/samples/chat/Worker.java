@@ -19,33 +19,40 @@ public class Worker implements Runnable {
 			final Long time = iter.next();
 			if (System.currentTimeMillis() > time.longValue()) {
 				final OurObject ourObject = monitorTable.remove(time);
-				sendAtmostphereResponse(ourObject.getResource().uuid(), SqrlAuthenticationStatus.AUTH_COMPLETE);
+				sendAtmostphereResponse(ourObject, ourObject.getStatus());
+				// prep the next update
+				if (ourObject.incrementStatusAndResetTime() != null) {
+					monitorTable.put(ourObject.getTriggerAt(), ourObject);
+				}
 			}
 		}
 	}
 
-	public void sendAtmostphereResponse(final String uuid,
+	public void sendAtmostphereResponse(final OurObject ourObject,
 			final SqrlAuthenticationStatus newAuthStatus) {
+		final String uuid = ourObject.getResource().uuid();
 		final AtmosphereResource r = currentResourceTable.get(uuid);
 		final AtmosphereResponse res = r.getResponse();
 		System.out.println("Broadcasting to " + uuid);
 
 		// @formatter:off
 		/*
-		 * In general, the Atmosphere documentation recommends using the 
+		 * In general, the Atmosphere documentation recommends using the
 		 * Broadcaster interface. However, we use the the
-		 * raw resource api instead for the following reasons: 
-		 * 
+		 * raw resource api instead for the following reasons:
+		 *
 		 * 1. We need a 1 to 1 broadcast approach. Attempts to do so
-		 * 		with 2.5.4 did not work, when we called broadcast, 
+		 * 		with 2.5.4 did not work, when we called broadcast,
 		 * 		onStateChange was never invoked
-		 * 2. Even if 1. did work, each broadcaster spawns at least 3 
+		 * 2. Even if 1. did work, each broadcaster spawns at least 3
 		 * 		threads via executor service.  There are ways around that
 		 * 		but it just seems like needless overhead
 		 */
 		// @formatter:on
 		try {
-			res.getWriter().write(newAuthStatus.toString());
+			final String data = "{ \"author:\":\"" + ourObject.getId() + "\", \"message\" : \""
+					+ newAuthStatus.toString() + "\" }";
+			res.getWriter().write(data);
 			switch (r.transport()) {
 				case JSONP:
 				case LONG_POLLING:
