@@ -27,8 +27,6 @@ import org.atmosphere.cpr.AtmosphereRequest;
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.AtmosphereResourceEvent;
 import org.atmosphere.cpr.AtmosphereResponse;
-import org.atmosphere.cpr.Broadcaster;
-import org.atmosphere.cpr.BroadcasterFactory;
 
 /**
  * Simple AtmosphereHandler that implement the logic to build a Server Side Events Chat application.
@@ -48,35 +46,31 @@ public class OurAtmosphereHandler implements AtmosphereHandler {
 
 	@Override
 	public void onRequest(final AtmosphereResource resource) throws IOException {
-
 		final AtmosphereRequest req = resource.getRequest();
-		final BroadcasterFactory broadcasterFactory = resource.getAtmosphereConfig().getBroadcasterFactory();
 
 		System.out.println(resource.uuid());
 		// First, tell Atmosphere to allow bi-directional communication by suspending.
 		if (req.getMethod().equalsIgnoreCase("GET")) {
-			// We are using HTTP long-polling with a timeout
 			resource.suspend();
-			// Give each browser it's own broadcaster. uuid is unique per browser
-			final Broadcaster broadcaster = broadcasterFactory.get(resource.uuid());
-			broadcaster.addAtmosphereResource(resource);
-			processor.storeLatestResource(resource, broadcaster);
+			processor.storeLatestResource(resource);
 			// Second, broadcast message to all connected users.
 		} else if (req.getMethod().equalsIgnoreCase("POST")) {
 			// Post means we're being sent data
 			final String message = req.getReader().readLine().trim();
 			final OurObject object = new OurObject(resource, message);
-			resource.getBroadcaster().broadcast(SqrlAuthenticationStatus.COMMUNICATING);
 			processor.monitorCorrelatorForChange(object);
 		}
 	}
 
+	// We don't use broadcast so this is only called when a browser disconnects
 	@Override
 	public void onStateChange(final AtmosphereResourceEvent event) throws IOException {
 		final AtmosphereResource r = event.getResource();
 		final AtmosphereResponse res = r.getResponse();
 
-		if (r.isSuspended()) {
+		if (!event.isResuming()) {
+			System.out.println("Closed " + r.uuid());
+		} else if (r.isSuspended()) {
 			final Object o = event.getMessage();
 			if (o != null) {
 				final String body = event.getMessage().toString();
@@ -97,8 +91,6 @@ public class OurAtmosphereHandler implements AtmosphereHandler {
 						break;
 				}
 			}
-		} else if (!event.isResuming()) {
-			event.broadcaster().broadcast(new Data("Someone", "say bye bye!").toString());
 		}
 	}
 
