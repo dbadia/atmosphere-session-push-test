@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.atmosphere.samples.chat;
+package org.atmosphere.samples.test;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;

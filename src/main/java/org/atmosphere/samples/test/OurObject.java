@@ -1,4 +1,4 @@
-package org.atmosphere.samples.chat;
+package org.atmosphere.samples.test;
 
 import org.atmosphere.cpr.AtmosphereResource;
 

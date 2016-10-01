@@ -20,7 +20,6 @@ $(function () {
     request.onOpen = function (response) {
         content.html($('<p>', { text: 'Atmosphere connected using ' + response.transport }));
         input.removeAttr('disabled').focus();
-        status.text('Choose name:');
     };
 
     request.onReconnect = function (request, response) {

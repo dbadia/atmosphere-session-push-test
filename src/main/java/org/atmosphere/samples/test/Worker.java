@@ -1,4 +1,4 @@
-package org.atmosphere.samples.chat;
+package org.atmosphere.samples.test;
 
 import java.io.IOException;
 import java.util.Iterator;
