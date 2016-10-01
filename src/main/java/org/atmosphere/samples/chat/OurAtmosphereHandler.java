@@ -16,7 +16,6 @@
 package org.atmosphere.samples.chat;
 
 import java.io.IOException;
-import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -33,21 +32,22 @@ import org.atmosphere.cpr.AtmosphereResourceEvent;
  * @author Jeanfrancois Arcand
  */
 
-@AtmosphereHandlerService(path = "/chat")
+@AtmosphereHandlerService(path = "/status")
 public class OurAtmosphereHandler implements AtmosphereHandler {
 	private static ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(1);
 	private final Worker processor;
 
 	public OurAtmosphereHandler() {
 		processor = new Worker();
-		scheduledExecutor.scheduleAtFixedRate(processor, 1, 1, TimeUnit.SECONDS); // TODO: configurable
+		scheduledExecutor.scheduleAtFixedRate(processor, 1, 1, TimeUnit.SECONDS);
 	}
 
 	@Override
 	public void onRequest(final AtmosphereResource resource) throws IOException {
 		final AtmosphereRequest req = resource.getRequest();
 
-		System.out.println(resource.uuid());
+		System.out
+		.println(req.getMethod() + " " + resource.getRequest().getRequestedSessionId() + " " + resource.uuid());
 		// First, tell Atmosphere to allow bi-directional communication by suspending.
 		if (req.getMethod().equalsIgnoreCase("GET")) {
 			resource.suspend();
@@ -58,9 +58,9 @@ public class OurAtmosphereHandler implements AtmosphereHandler {
 			// Simple JSON -- Use Jackson for more complex structure
 			// Message looks like { "author" : "foo", "message" : "bar" }
 			final String author = message.substring(message.indexOf(":") + 2, message.indexOf(",") - 1);
-			final String chat = message.substring(message.lastIndexOf(":") + 2, message.length() - 2);
+			final String correlator = message.substring(message.lastIndexOf(":") + 2, message.length() - 2);
 
-			final OurObject object = new OurObject(resource, author);
+			final OurObject object = new OurObject(resource, correlator);
 			processor.monitorCorrelatorForChange(object);
 		}
 	}
@@ -79,20 +79,7 @@ public class OurAtmosphereHandler implements AtmosphereHandler {
 	public void destroy() {
 	}
 
-	private final static class Data {
-
-		private final String text;
-		private final String author;
-
-		public Data(final String author, final String text) {
-			this.author = author;
-			this.text = text;
-		}
-
-		@Override
-		public String toString() {
-			return "{ \"text\" : \"" + text + "\", \"author\" : \"" + author + "\" , \"time\" : " + new Date().getTime()
-					+ "}";
-		}
+	public static String getSessionId(final AtmosphereResource resource) {
+		return resource.getRequest().getRequestedSessionId();
 	}
 }

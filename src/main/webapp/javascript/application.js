@@ -8,7 +8,7 @@ $(function () {
     var author = null;
     var logged = false;
     var socket = atmosphere;
-    var request = { url: document.location.toString() + 'chat',
+    var request = { url: document.location.toString() + 'status',
         contentType: "application/json",
         logLevel: 'debug',
         transport: 'sse',
@@ -65,27 +65,15 @@ $(function () {
         content.html($('<p>', { text: 'Sorry, but there\'s some problem with your '
             + 'socket or the server is down' }));
     };
-
     var subSocket = socket.subscribe(request);
 
-    input.keydown(function (e) {
-        if (e.keyCode === 13) {
-            var msg = $(this).val();
+    
+    author = new Date().getTime() / 1000;
+    var msg = 'start';
+    subSocket.push(atmosphere.util.stringifyJSON({ author: author, message: msg }));
+    $(this).val('');
+    myName = author;
 
-            // First message is always the author's name
-            if (author == null) {
-                author = msg;
-            }
-
-            subSocket.push(atmosphere.util.stringifyJSON({ author: author, message: msg }));
-            $(this).val('');
-
-            input.attr('disabled', 'disabled');
-            if (myName === false) {
-                myName = msg;
-            }
-        }
-    });
 
     function addMessage(author, message, color) {
     	var datetime = new Date();

@@ -4,15 +4,15 @@ import org.atmosphere.cpr.AtmosphereResource;
 
 public class OurObject {
 	private final AtmosphereResource resource;
-	private final String id;
-	private long wait = 2000;
-	private long triggerAt = computeTriggerAt();
+	private final String correlator;
+	private final long wait = 2000;
+	private final long triggerAt = computeTriggerAt();
 	private SqrlAuthenticationStatus status = SqrlAuthenticationStatus.CORRELATOR_ISSUED;
 
-	public OurObject(final AtmosphereResource resource, final String id) {
+	public OurObject(final AtmosphereResource resource, final String correlator) {
 		super();
 		this.resource = resource;
-		this.id = id;
+		this.correlator = correlator;
 	}
 
 	private long computeTriggerAt() {
@@ -24,7 +24,7 @@ public class OurObject {
 	}
 
 	public String getId() {
-		return id;
+		return correlator;
 	}
 
 	public SqrlAuthenticationStatus incrementStatusAndResetTime() {
@@ -33,11 +33,9 @@ public class OurObject {
 		}
 		final SqrlAuthenticationStatus toReturn = status;
 		if (toReturn.ordinal() == SqrlAuthenticationStatus.values().length - 1) {
-			status = null; // we're done
+			return null;
 		} else {
 			status = SqrlAuthenticationStatus.values()[toReturn.ordinal() + 1];
-			wait *= 2;
-			triggerAt = computeTriggerAt();
 		}
 		return toReturn;
 	}

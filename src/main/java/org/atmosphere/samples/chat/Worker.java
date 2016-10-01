@@ -14,26 +14,39 @@ public class Worker implements Runnable {
 
 	@Override
 	public void run() {
-		final Iterator<Long> iter = monitorTable.keySet().iterator();
-		while (iter.hasNext()) {
-			final Long time = iter.next();
-			if (System.currentTimeMillis() > time.longValue()) {
-				final OurObject ourObject = monitorTable.remove(time);
-				sendAtmostphereResponse(ourObject, ourObject.getStatus());
-				// prep the next update
-				if (ourObject.incrementStatusAndResetTime() != null) {
-					monitorTable.put(ourObject.getTriggerAt(), ourObject);
+		try {
+			final Iterator<Long> iter = monitorTable.keySet().iterator();
+			while (iter.hasNext()) {
+				final Long time = iter.next();
+				if (System.currentTimeMillis() > time.longValue()) {
+					final OurObject ourObject = monitorTable.remove(time);
+					final String sessionId = OurAtmosphereHandler.getSessionId(ourObject.getResource());
+					final AtmosphereResource r = currentResourceTable.get(sessionId);
+					if (r != null) {
+						sendAtmostphereResponse(ourObject, ourObject.getStatus());
+						// prep the next update
+						if (ourObject.incrementStatusAndResetTime() != null) {
+							monitorTable.put(ourObject.getTriggerAt(), ourObject);
+						}
+					}
 				}
 			}
+		} catch (final Throwable t) {
+			// Don't let worker thread die
+			t.printStackTrace();
 		}
 	}
 
 	public void sendAtmostphereResponse(final OurObject ourObject,
 			final SqrlAuthenticationStatus newAuthStatus) {
-		final String uuid = ourObject.getResource().uuid();
-		final AtmosphereResource r = currentResourceTable.get(uuid);
+		final String sessionId = ourObject.getResource().getRequest().getRequestedSessionId();
+		final AtmosphereResource r = currentResourceTable.get(sessionId);
+		if (r == null) {
+			System.err.println("AtmosphereResource not found for sessionId " + sessionId);
+			return;
+		}
 		final AtmosphereResponse res = r.getResponse();
-		System.out.println("Broadcasting to " + uuid);
+		System.out.println("Broadcasting to " + sessionId);
 
 		// @formatter:off
 		/*
@@ -67,7 +80,7 @@ public class Worker implements Runnable {
 				default:
 					throw new IOException("Don't know how to handle transport " + r.transport());
 			}
-			System.out.println("Response sent to " + uuid);
+			System.out.println("Response sent to " + sessionId);
 		} catch (final IOException e) {
 			e.printStackTrace();
 		}
@@ -78,7 +91,8 @@ public class Worker implements Runnable {
 	}
 
 	public void storeLatestResource(final AtmosphereResource resource) {
-		currentResourceTable.put(resource.uuid(), resource);
-
+		final String sessionId = OurAtmosphereHandler.getSessionId(resource);
+		System.out.println("Storing sessionId " + sessionId);
+		currentResourceTable.put(sessionId, resource);
 	}
 }
