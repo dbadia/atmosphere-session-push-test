@@ -1,4 +1,4 @@
-package org.atmosphere.samples.test;
+package com.github.dbadia.atomosphere.test;
 
 import java.io.IOException;
 import java.util.Iterator;

@@ -1,11 +1,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.dbadia</groupId>
-	<artifactId>atmosphere-test-me2</artifactId>
+	<groupId>com.github.dbadia</groupId>
+	<artifactId>atmosphere-status-test</artifactId>
 	<packaging>war</packaging>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>atmosphere-test-me Maven Webapp</name>
+	<name>atmosphere push status test webapp</name>
 	<url>http://maven.apache.org</url>
 	<dependencies>
 		<dependency>
@@ -58,7 +58,6 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<finalName>atmosphere-test-me2</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
