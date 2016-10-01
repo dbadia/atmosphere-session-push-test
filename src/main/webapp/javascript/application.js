@@ -18,16 +18,19 @@ $(function () {
 
 
     request.onOpen = function (response) {
+    	console.log('atmosphere onOpen');
         content.html($('<p>', { text: 'Atmosphere connected using ' + response.transport }));
         input.removeAttr('disabled').focus();
     };
 
     request.onReconnect = function (request, response) {
+    	console.log('atmosphere onReconnect');
         content.html($('<p>', { text: 'Connection lost, trying to reconnect. Trying to reconnect ' + request.reconnectInterval}));
         input.attr('disabled', 'disabled');
     };
 
     request.onReopen = function (response) {
+    	console.log('atmosphere onReopen');
         input.removeAttr('disabled').focus();
         content.html($('<p>', { text: 'Atmosphere re-connected using ' + response.transport }));
     };
@@ -56,11 +59,13 @@ $(function () {
     };
 
     request.onClose = function (response) {
+    	console.log('atmosphere onClose');
         content.html($('<p>', { text: 'Server closed the connection after a timeout' }));
         input.attr('disabled', 'disabled');
     };
 
     request.onError = function (response) {
+    	console.log('atmosphere onError');
         content.html($('<p>', { text: 'Sorry, but there\'s some problem with your '
             + 'socket or the server is down' }));
     };

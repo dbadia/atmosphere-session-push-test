@@ -7,8 +7,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.AtmosphereResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Worker implements Runnable {
+	private static final Logger logger = LoggerFactory.getLogger(Worker.class);
+	private static final String EOL = System.getProperty("line.separator");
 	private final Map<Long, OurObject> monitorTable = new ConcurrentHashMap<>();
 	private final Map<String, AtmosphereResource> currentResourceTable = new ConcurrentHashMap<>();
 
@@ -20,33 +24,36 @@ public class Worker implements Runnable {
 				final Long time = iter.next();
 				if (System.currentTimeMillis() > time.longValue()) {
 					final OurObject ourObject = monitorTable.remove(time);
-					final String sessionId = OurAtmosphereHandler.getSessionId(ourObject.getResource());
-					final AtmosphereResource r = currentResourceTable.get(sessionId);
-					if (r != null) {
-						sendAtmostphereResponse(ourObject, ourObject.getStatus());
-						// prep the next update
-						if (ourObject.incrementStatusAndResetTime() != null) {
-							monitorTable.put(ourObject.getTriggerAt(), ourObject);
+					final String sessionId = ourObject.getAtmosphereSessionId();
+					if (sessionId == null) {
+						logger.error("Got null session id for atmosphere UUID {}", ourObject.getAtmosphereSessionId());
+					} else {
+						final AtmosphereResource r = currentResourceTable.get(sessionId);
+						if (r != null) {
+							sendAtmostphereResponse(ourObject, ourObject.getStatus());
+							// prep the next update
+							if (ourObject.incrementStatusAndResetTime() != null) {
+								monitorTable.put(ourObject.getTriggerAt(), ourObject);
+							}
 						}
 					}
 				}
 			}
 		} catch (final Throwable t) {
 			// Don't let worker thread die
-			t.printStackTrace();
+			logger.error("Caught error in " + getClass().getSimpleName() + ".run()", t);
 		}
 	}
 
 	public void sendAtmostphereResponse(final OurObject ourObject,
 			final SqrlAuthenticationStatus newAuthStatus) {
-		final String sessionId = ourObject.getResource().getRequest().getRequestedSessionId();
-		final AtmosphereResource r = currentResourceTable.get(sessionId);
-		if (r == null) {
-			System.err.println("AtmosphereResource not found for sessionId " + sessionId);
+		final String sessionId = ourObject.getAtmosphereSessionId();
+		final AtmosphereResource resource = currentResourceTable.get(sessionId);
+		if (resource == null) {
+			logger.error("AtmosphereResource not found for sessionId {}", sessionId);
 			return;
 		}
-		final AtmosphereResponse res = r.getResponse();
-		System.out.println("Broadcasting to " + sessionId);
+		final AtmosphereResponse res = resource.getResponse();
 
 		// @formatter:off
 		/*
@@ -66,10 +73,10 @@ public class Worker implements Runnable {
 			final String data = "{ \"author:\":\"" + ourObject.getId() + "\", \"message\" : \""
 					+ newAuthStatus.toString() + "\" }";
 			res.getWriter().write(data);
-			switch (r.transport()) {
+			switch (resource.transport()) {
 				case JSONP:
 				case LONG_POLLING:
-					r.resume();
+					resource.resume();
 					break;
 				case WEBSOCKET:
 					break;
@@ -78,11 +85,11 @@ public class Worker implements Runnable {
 					res.getWriter().flush();
 					break;
 				default:
-					throw new IOException("Don't know how to handle transport " + r.transport());
+					throw new IOException("Don't know how to handle transport " + resource.transport());
 			}
-			System.out.println("Response sent to " + sessionId);
+			logger.info("Status update of {} sent to atmosphere sessionId {}", newAuthStatus, sessionId);
 		} catch (final IOException e) {
-			e.printStackTrace();
+			logger.error("Error sending status update to atmosphere sessionId " + sessionId, e);
 		}
 	}
 
@@ -92,7 +99,17 @@ public class Worker implements Runnable {
 
 	public void storeLatestResource(final AtmosphereResource resource) {
 		final String sessionId = OurAtmosphereHandler.getSessionId(resource);
-		System.out.println("Storing sessionId " + sessionId);
-		currentResourceTable.put(sessionId, resource);
+		if (sessionId == null) {
+			logger.error(
+					"atmosphere session id was null for current resource, see https://github.com/Atmosphere/atmosphere/wiki/Enabling-HttpSession-Support or put the following in your web.xml?"
+							+ EOL
+							+ "    <listener><listener-class>org.atmosphere.cpr.SessionSupport</listener-class></listener>"
+							+ EOL
+							+
+					"    <context-param><param-name>org.atmosphere.cpr.sessionSupport</param-name><param-value>true</param-value></context-param>");
+		} else {
+			logger.debug("Updating current resource to {} for atmosphere sessionId {}", resource.uuid(), sessionId);
+			currentResourceTable.put(sessionId, resource);
+		}
 	}
 }

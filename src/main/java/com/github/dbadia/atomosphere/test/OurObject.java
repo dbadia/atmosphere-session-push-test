@@ -1,26 +1,40 @@
 package com.github.dbadia.atomosphere.test;
 
-import org.atmosphere.cpr.AtmosphereResource;
-
 public class OurObject {
-	private final AtmosphereResource resource;
+	/**
+	 * Once the atmosphere reosurce is invalid, the sessionID may not be available, so persist it here
+	 */
+	private final String atmosphereSessionId;
+
+	public String getAtmosphereSessionId() {
+		return atmosphereSessionId;
+	}
+
+	/**
+	 * The atmosphere UUID of the post data request that sent the correlator. Only useful for tracking
+	 */
+	private final String dataResourceUuid;
 	private final String correlator;
-	private final long wait = 2000;
 	private final long triggerAt = computeTriggerAt();
+	private long wait = 2000;
 	private SqrlAuthenticationStatus status = SqrlAuthenticationStatus.CORRELATOR_ISSUED;
 
-	public OurObject(final AtmosphereResource resource, final String correlator) {
+	public OurObject(final String dataResourceUuid, final String atmosphereSessionId, final String correlator) {
 		super();
-		this.resource = resource;
+		this.dataResourceUuid = dataResourceUuid;
 		this.correlator = correlator;
+		this.atmosphereSessionId = atmosphereSessionId;
+		if (atmosphereSessionId == null) {
+			throw new IllegalArgumentException("sessionID cannot be null");
+		}
+	}
+
+	public String getDataResourceUuid() {
+		return dataResourceUuid;
 	}
 
 	private long computeTriggerAt() {
 		return System.currentTimeMillis() + wait;
-	}
-
-	public AtmosphereResource getResource() {
-		return resource;
 	}
 
 	public String getId() {
@@ -36,6 +50,8 @@ public class OurObject {
 			return null;
 		} else {
 			status = SqrlAuthenticationStatus.values()[toReturn.ordinal() + 1];
+			wait += 2000;
+			computeTriggerAt();
 		}
 		return toReturn;
 	}

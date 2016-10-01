@@ -21,7 +21,6 @@
         <servlet-name>AtmosphereServlet</servlet-name>
         <url-pattern>/status/*</url-pattern>
     </servlet-mapping>
-    <!-- 
     <listener>
 	    <listener-class>org.atmosphere.cpr.SessionSupport</listener-class>
 	</listener>
@@ -29,6 +28,7 @@
 	    <param-name>org.atmosphere.cpr.sessionSupport</param-name>
 	    <param-value>true</param-value>
 	</context-param>
+    <!-- 
 	 -->
 </web-app>
 

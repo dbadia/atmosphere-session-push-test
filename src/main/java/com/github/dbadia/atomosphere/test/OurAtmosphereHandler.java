@@ -10,6 +10,8 @@ import org.atmosphere.cpr.AtmosphereHandler;
 import org.atmosphere.cpr.AtmosphereRequest;
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.AtmosphereResourceEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple AtmosphereHandler that sends status updates to the browser on a per client basis. Makes use of session to
@@ -19,6 +21,7 @@ import org.atmosphere.cpr.AtmosphereResourceEvent;
 
 @AtmosphereHandlerService(path = "/status")
 public class OurAtmosphereHandler implements AtmosphereHandler {
+	private static final Logger logger = LoggerFactory.getLogger(OurAtmosphereHandler.class);
 	private static ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(1);
 	private final Worker processor;
 
@@ -29,23 +32,23 @@ public class OurAtmosphereHandler implements AtmosphereHandler {
 
 	@Override
 	public void onRequest(final AtmosphereResource resource) throws IOException {
-		final AtmosphereRequest req = resource.getRequest();
+		final AtmosphereRequest request = resource.getRequest();
 
-		System.out
-		.println(req.getMethod() + " " + resource.getRequest().getRequestedSessionId() + " " + resource.uuid());
+		logger.info("Atmosphere onRequest {} {} {} {}", request.getMethod(), request.getRequestedSessionId(), resource.uuid(),
+				request.getHeader("User-Agent"));
 		// First, tell Atmosphere to allow bi-directional communication by suspending.
-		if (req.getMethod().equalsIgnoreCase("GET")) {
+		if (request.getMethod().equalsIgnoreCase("GET")) {
 			resource.suspend();
 			processor.storeLatestResource(resource);
-		} else if (req.getMethod().equalsIgnoreCase("POST")) {
+		} else if (request.getMethod().equalsIgnoreCase("POST")) {
 			// Post means we're being sent data
-			final String message = req.getReader().readLine().trim();
+			final String message = request.getReader().readLine().trim();
 			// Simple JSON -- Use Jackson for more complex structure
 			// Message looks like { "author" : "foo", "message" : "bar" }
 			final String author = message.substring(message.indexOf(":") + 2, message.indexOf(",") - 1);
 			final String correlator = message.substring(message.lastIndexOf(":") + 2, message.length() - 2);
 
-			final OurObject object = new OurObject(resource, correlator);
+			final OurObject object = new OurObject(resource.uuid(), request.getRequestedSessionId(), correlator);
 			processor.monitorCorrelatorForChange(object);
 		}
 	}
@@ -53,10 +56,11 @@ public class OurAtmosphereHandler implements AtmosphereHandler {
 	// We don't use broadcast so this is only called when a browser disconnects
 	@Override
 	public void onStateChange(final AtmosphereResourceEvent event) throws IOException {
-		final AtmosphereResource r = event.getResource();
+		final AtmosphereResource resource = event.getResource();
 
 		if (!event.isResuming()) {
-			System.out.println("Closed " + r.uuid());
+			logger.info("Atmosphere browser closed connection for uuid {} sessionId {}", resource.uuid(),
+					resource.getRequest().getSession());
 		}
 	}
 
