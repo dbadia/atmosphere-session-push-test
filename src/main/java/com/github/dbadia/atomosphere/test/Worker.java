@@ -13,27 +13,34 @@ import org.slf4j.LoggerFactory;
 public class Worker implements Runnable {
 	private static final Logger logger = LoggerFactory.getLogger(Worker.class);
 	private static final String EOL = System.getProperty("line.separator");
+	private static final Object MONITOR_TABLE_LOCK = new Object();
 	private final Map<Long, OurObject> monitorTable = new ConcurrentHashMap<>();
 	private final Map<String, AtmosphereResource> currentResourceTable = new ConcurrentHashMap<>();
 
 	@Override
 	public void run() {
 		try {
-			final Iterator<Long> iter = monitorTable.keySet().iterator();
-			while (iter.hasNext()) {
-				final Long time = iter.next();
-				if (System.currentTimeMillis() > time.longValue()) {
-					final OurObject ourObject = monitorTable.remove(time);
-					final String sessionId = ourObject.getAtmosphereSessionId();
-					if (sessionId == null) {
-						logger.error("Got null session id for atmosphere UUID {}", ourObject.getAtmosphereSessionId());
-					} else {
-						final AtmosphereResource r = currentResourceTable.get(sessionId);
-						if (r != null) {
-							sendAtmostphereResponse(ourObject, ourObject.getStatus());
-							// prep the next update
-							if (ourObject.incrementStatusAndResetTime() != null) {
-								monitorTable.put(ourObject.getTriggerAt(), ourObject);
+			synchronized (MONITOR_TABLE_LOCK) {
+				final Iterator<Long> iter = monitorTable.keySet().iterator();
+				while (iter.hasNext()) {
+					final Long time = iter.next();
+					if (System.currentTimeMillis() > time.longValue()) {
+						final OurObject ourObject = monitorTable.get(time);
+						final String sessionId = ourObject.getAtmosphereSessionId();
+						if (sessionId == null) {
+							logger.error("Got null session id for atmosphere UUID {}", ourObject.getAtmosphereSessionId());
+						} else {
+							final AtmosphereResource resource = currentResourceTable.get(sessionId);
+							if (resource != null) {
+								if (resource.isCancelled()) {
+									// The user is on another page or a new request will come in
+
+									if (currentResourceTable.get(sessionId).equals(resource)) {
+										currentResourceTable.remove(sessionId);
+									}
+								}
+								sendAtmostphereResponse(ourObject, ourObject.getStatus());
+								ourObject.incrementStatusAndResetTime();
 							}
 						}
 					}
@@ -93,8 +100,25 @@ public class Worker implements Runnable {
 		}
 	}
 
+	public void stopMonitoringSessionId(final String atmospheresSessionId) {
+		synchronized (MONITOR_TABLE_LOCK) {
+			final Iterator<OurObject> iter = monitorTable.values().iterator();
+			while (iter.hasNext()) {
+				final OurObject clientObject = iter.next();
+				if (clientObject.getAtmosphereSessionId().equals(atmospheresSessionId)) {
+					iter.remove();
+					return;
+				}
+			}
+		}
+		logger.error("Tried to remove atmosphere session Id {} from monitorTable but it wasn't there",
+				atmospheresSessionId);
+	}
+
 	public void monitorCorrelatorForChange(final OurObject object) {
-		monitorTable.put(object.getTriggerAt(), object);
+		synchronized (MONITOR_TABLE_LOCK) {
+			monitorTable.put(object.getTriggerAt(), object);
+		}
 	}
 
 	public void storeLatestResource(final AtmosphereResource resource) {
@@ -112,4 +136,5 @@ public class Worker implements Runnable {
 			currentResourceTable.put(sessionId, resource);
 		}
 	}
+
 }

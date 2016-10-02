@@ -8,7 +8,9 @@ $(function () {
     var author = null;
     var logged = false;
     var socket = atmosphere;
-    var request = { url: document.location.toString() + 'status',
+    //var request = { url: document.location.toString() + '/update',
+    var urlpath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/")) +'/update';
+    var request = { url: urlpath,
         contentType: "application/json",
         logLevel: 'debug',
         transport: 'sse',
@@ -55,6 +57,11 @@ $(function () {
             content.append('<p><span style="color:' + color + '">' + json.author + '</span> @ ' + +(datetime.getHours() < 10 ? '0' + datetime.getHours() : datetime.getHours()) + ':'
                 + (datetime.getMinutes() < 10 ? '0' + datetime.getMinutes() : datetime.getMinutes())
                 + ': ' + json.message + '</p>');
+            if(json.message == 'AUTH_COMPLETE') {
+            	subSocket.push(atmosphere.util.stringifyJSON({ author: author, message: 'redirect' }));
+            	window.location.replace('done.html');
+            }
+            
         }
     };
 

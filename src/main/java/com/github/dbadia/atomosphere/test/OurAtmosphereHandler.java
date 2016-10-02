@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
  * @author Dave Badia
  */
 
-@AtmosphereHandlerService(path = "/status")
+@AtmosphereHandlerService(path = "/update")
 public class OurAtmosphereHandler implements AtmosphereHandler {
 	private static final Logger logger = LoggerFactory.getLogger(OurAtmosphereHandler.class);
 	private static ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(1);
@@ -46,10 +46,17 @@ public class OurAtmosphereHandler implements AtmosphereHandler {
 			// Simple JSON -- Use Jackson for more complex structure
 			// Message looks like { "author" : "foo", "message" : "bar" }
 			final String author = message.substring(message.indexOf(":") + 2, message.indexOf(",") - 1);
-			final String correlator = message.substring(message.lastIndexOf(":") + 2, message.length() - 2);
+			final String messageText = message.substring(message.lastIndexOf(":") + 2, message.length() - 2);
 
-			final OurObject object = new OurObject(resource.uuid(), request.getRequestedSessionId(), correlator);
-			processor.monitorCorrelatorForChange(object);
+			if ("redirect".equals(messageText)) {
+				// The browser received the complete update and is redirecting, clean up
+				processor.stopMonitoringSessionId(request.getRequestedSessionId());
+			} else {
+				// It's the initial correlator message
+				final OurObject object = new OurObject(resource.uuid(), request.getRequestedSessionId(), messageText);
+				processor.monitorCorrelatorForChange(object);
+			}
+
 		}
 	}
 

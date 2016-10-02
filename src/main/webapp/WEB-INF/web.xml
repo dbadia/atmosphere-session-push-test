@@ -19,7 +19,7 @@
     </servlet>
     <servlet-mapping>
         <servlet-name>AtmosphereServlet</servlet-name>
-        <url-pattern>/status/*</url-pattern>
+        <url-pattern>/update/*</url-pattern>
     </servlet-mapping>
     <listener>
 	    <listener-class>org.atmosphere.cpr.SessionSupport</listener-class>

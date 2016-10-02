@@ -15,8 +15,8 @@ public class OurObject {
 	 */
 	private final String dataResourceUuid;
 	private final String correlator;
-	private final long triggerAt = computeTriggerAt();
-	private long wait = 2000;
+	private long triggerAt = computeTriggerAt();
+	private long wait = 0;
 	private SqrlAuthenticationStatus status = SqrlAuthenticationStatus.CORRELATOR_ISSUED;
 
 	public OurObject(final String dataResourceUuid, final String atmosphereSessionId, final String correlator) {
@@ -41,19 +41,15 @@ public class OurObject {
 		return correlator;
 	}
 
-	public SqrlAuthenticationStatus incrementStatusAndResetTime() {
-		if (status == null) {
-			return null;
-		}
+	public void incrementStatusAndResetTime() {
 		final SqrlAuthenticationStatus toReturn = status;
-		if (toReturn.ordinal() == SqrlAuthenticationStatus.values().length - 1) {
-			return null;
-		} else {
+		if (toReturn.ordinal() < SqrlAuthenticationStatus.values().length - 1) {
 			status = SqrlAuthenticationStatus.values()[toReturn.ordinal() + 1];
-			wait += 2000;
-			computeTriggerAt();
+			if (wait == 0) {
+				wait = 3000;
+				triggerAt = computeTriggerAt();
+			}
 		}
-		return toReturn;
 	}
 
 	public SqrlAuthenticationStatus getStatus() {
