@@ -34,18 +34,21 @@ public class OurAtmosphereHandler implements AtmosphereHandler {
 	public void onRequest(final AtmosphereResource resource) throws IOException {
 		final AtmosphereRequest request = resource.getRequest();
 
-		logger.info("Atmosphere onRequest {} {} {} {}", request.getMethod(), request.getRequestedSessionId(), resource.uuid(),
-				request.getHeader("User-Agent"));
 		// First, tell Atmosphere to allow bi-directional communication by suspending.
 		if (request.getMethod().equalsIgnoreCase("GET")) {
+			logger.info("Atmosphere onRequest {} {} {} {}", request.getMethod(), request.getRequestedSessionId(),
+					resource.uuid(), request.getHeader("User-Agent"));
 			resource.suspend();
 			processor.storeLatestResource(resource);
 		} else if (request.getMethod().equalsIgnoreCase("POST")) {
 			// Post means we're being sent data
 			final String message = request.getReader().readLine().trim();
-			// Simple JSON -- Use Jackson for more complex structure
+			logger.info("Atmosphere onRequest {} {} {} {} {}", request.getMethod(), request.getRequestedSessionId(),
+					resource.uuid(), message, request.getHeader("User-Agent"));
+
 			// Message looks like { "author" : "foo", "message" : "bar" }
 			final String author = message.substring(message.indexOf(":") + 2, message.indexOf(",") - 1);
+			logger.debug("author = {}", author);
 			final String messageText = message.substring(message.lastIndexOf(":") + 2, message.length() - 2);
 
 			if ("redirect".equals(messageText)) {
